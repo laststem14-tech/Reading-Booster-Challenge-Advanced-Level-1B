@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Booster High-School English Activity Platform</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Noto Sans KR', 'sans-serif'],
+                    },
+                    colors: {
+                        pastelSky: '#E0F2FE',
+                        pastelEmerald: '#D1FAE5',
+                        pastelPurple: '#EDE9FE',
+                        brandBlue: '#0284C7',
+                        brandEmerald: '#059669',
+                        brandPurple: '#7C3AED',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #e0f2fe 0%, #ede9fe 50%, #d1fae5 100%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+        }
+
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .glass-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .chunk-box {
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        @keyframes pulse-fast {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .timer-warning {
+            animation: pulse-fast 0.6s infinite;
+            color: #ef4444;
+        }
+    </style>
+
+    <!-- FIREBASE SDK CDN (Firestore) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } 
+            from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Firebase 프로젝트 설정 (본인의 Firebase 콘솔 설정 값으로 연결하세요)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Firebase 초기화
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 전역 객체로 전송
+        window.fbDB = db;
+        window.fbCollection = collection;
+        window.fbAddDoc = addDoc;
+        window.fbGetDocs = getDocs;
+        window.fbQuery = query;
+        window.fbWhere = where;
+        window.fbOrderBy = orderBy;
+        window.fbServerTimestamp = serverTimestamp;
+    </script>
+</head>
+<body class="font-sans text-slate-800 antialiased selection:bg-purple-200">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 w-full glass-card border-b border-white/40 px-4 py-3 sm:px-8">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="goHome()">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-400 to-purple-500 flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight bg-gradient-to-r from-sky-600 to-purple-600 bg-clip-text text-transparent">Reading Booster</h1>
+                    <p class="text-xs text-slate-500 font-medium">고난도 모의고사 31번~40번 챌린지</p>
+                </div>
+            </div>
+
+            <!-- Student Info & BGM Controls -->
+            <div class="flex items-center gap-3">
+                <button id="bgmToggleBtn" onclick="toggleBGM()" class="glass-btn px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 text-slate-700 shadow-sm">
+                    <i id="bgmIcon" class="fa-solid fa-music text-purple-500"></i>
+                    <span id="bgmText">BGM ON</span>
+                </button>
+                <button onclick="openDashboard()" class="glass-btn px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 text-slate-700 shadow-sm">
+                    <i class="fa-solid fa-chart-line text-emerald-500"></i>
+                    <span class="hidden sm:inline">교사 대시보드</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto px-4 py-6">
+
+        <!-- User Registration Modal / Banner -->
+        <div id="userModal" class="mb-6 glass-card p-5 rounded-3xl border border-white/60">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-user-graduate"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-base text-slate-800">학습자 등록</h2>
+                        <p class="text-xs text-slate-500">성적 기록 및 교사 확인을 위해 학번과 이름을 입력하세요.</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <input type="text" id="studentId" placeholder="학번 (예: 20101)" class="px-4 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white/80 w-full sm:w-32">
+                    <input type="text" id="studentName" placeholder="이름 (예: 홍길동)" class="px-4 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white/80 w-full sm:w-32">
+                    <button onclick="saveUserInfo()" class="w-full sm:w-auto px-5 py-2 bg-gradient-to-r from-sky-500 to-purple-600 text-white text-sm font-bold rounded-xl shadow-md hover:opacity-95 transition">
+                        등록 완료
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Info Bar (After Login) -->
+        <div id="userInfoBar" class="hidden mb-6 glass-card px-6 py-3 rounded-2xl flex items-center justify-between border border-white/60">
+            <div class="flex items-center gap-3">
+                <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full" id="displayStudentId"></span>
+                <span class="font-bold text-slate-800 text-sm" id="displayStudentName"></span>
+                <span class="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">학습 진행 중</span>
+            </div>
+            <button onclick="editUserInfo()" class="text-xs text-slate-400 hover:text-slate-600 underline">정보 수정</button>
+        </div>
+
+        <!-- Section 1: Passage Selection Screen -->
+        <div id="selectionScreen" class="space-y-6">
+            <div class="text-center space-y-2 my-4">
+                <span class="px-4 py-1.5 bg-sky-100 text-sky-700 font-bold text-xs rounded-full">31번 ~ 40번 지문 선택</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800">4단계 단계별 독해 챌린지</h2>
+                <p class="text-sm text-slate-600 max-w-xl mx-auto">어휘 타임어택 ➔ 독해 문제 ➔ 수능형 요약 ➔ 문장 구획(Chunking) 순서로 학습합니다.</p>
+            </div>
+
+            <!-- Passage Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="passageGrid">
+                <!-- 동적 배치 -->
+            </div>
+        </div>
+
+        <!-- Section 2: Stage Activity Screen -->
+        <div id="activityScreen" class="hidden space-y-6">
+            <!-- Header for Stages -->
+            <div class="glass-card p-4 rounded-3xl flex flex-wrap items-center justify-between gap-4 border border-white/60">
+                <div class="flex items-center gap-3">
+                    <button onclick="goHome()" class="w-9 h-9 rounded-xl bg-white text-slate-600 flex items-center justify-center hover:bg-slate-100 shadow-sm">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <div>
+                        <span id="activePassageTitle" class="font-extrabold text-slate-800 text-base">지문 31번</span>
+                        <div class="flex items-center gap-1 text-xs text-slate-500">
+                            <span id="stageBadge" class="font-semibold text-purple-600">Stage 1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stage Progress Indicators -->
+                <div class="flex items-center gap-1 sm:gap-2">
+                    <div id="stageIndicator1" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-600 text-white shadow-sm">1. 어휘</div>
+                    <div id="stageIndicator2" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white/60 text-slate-400">2. 독해</div>
+                    <div id="stageIndicator3" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white/60 text-slate-400">3. 요약</div>
+                    <div id="stageIndicator4" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white/60 text-slate-400">4. 청킹</div>
+                </div>
+
+                <!-- Timer Display -->
+                <div id="timerContainer" class="flex items-center gap-2 bg-white/80 px-4 py-1.5 rounded-xl border border-slate-200">
+                    <i class="fa-regular fa-clock text-rose-500"></i>
+                    <span id="timerText" class="font-mono font-bold text-sm text-slate-700">00:00</span>
+                </div>
+            </div>
+
+            <!-- Stage 1 View: Vocabulary Time Attack -->
+            <div id="stage1View" class="hidden space-y-4">
+                <div class="glass-card p-6 sm:p-8 rounded-3xl space-y-6 border border-white/80">
+                    <div class="flex justify-between items-center border-b border-slate-200/60 pb-4">
+                        <div>
+                            <span class="text-xs font-bold text-sky-600 uppercase tracking-wider">Stage 1 • 어휘 10초 타임어택</span>
+                            <h3 class="text-xl font-bold text-slate-800">단어의 올바른 뜻을 고르세요</h3>
+                        </div>
+                        <span id="s1Progress" class="text-sm font-bold text-slate-500">1 / 8</span>
+                    </div>
+
+                    <div class="text-center py-6 space-y-4">
+                        <div class="inline-flex items-center justify-center gap-3">
+                            <h2 id="s1Word" class="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-wide">Infectious</h2>
+                            <button onclick="speakWord()" class="w-10 h-10 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-700 flex items-center justify-center transition shadow-sm">
+                                <i class="fa-solid fa-volume-high text-lg"></i>
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-400">원어민 발음 버튼을 눌러 음성을 들을 수 있습니다.</p>
+                    </div>
+
+                    <!-- Options Grid -->
+                    <div id="s1Options" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+                </div>
+            </div>
+
+            <!-- Stage 2 View: Passage Reading & Quiz -->
+            <div id="stage2View" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-6 glass-card p-6 rounded-3xl border border-white/80 space-y-3 max-h-[600px] overflow-y-auto">
+                    <div class="flex items-center justify-between sticky top-0 bg-white/90 p-2 rounded-xl border border-slate-100 shadow-sm">
+                        <span class="text-xs font-bold text-emerald-600"><i class="fa-solid fa-book-open mr-1"></i>지문 원문</span>
+                    </div>
+                    <div id="s2PassageContent" class="text-sm leading-relaxed text-slate-700 space-y-3 font-normal"></div>
+                </div>
+
+                <div class="lg:col-span-6 space-y-4">
+                    <div class="glass-card p-6 rounded-3xl border border-white/80 space-y-5">
+                        <div class="flex justify-between items-center border-b border-slate-200/60 pb-3">
+                            <span class="text-xs font-bold text-emerald-600 uppercase">Stage 2 • 독해 및 내용 파악</span>
+                            <span id="s2QuizProgress" class="text-xs font-bold text-slate-500">문제 1 / 3</span>
+                        </div>
+                        <div id="s2QuizContainer" class="space-y-4">
+                            <h4 id="s2QuestionText" class="font-bold text-slate-800 text-base">질문 내용</h4>
+                            <div id="s2Options" class="space-y-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage 3 View: Paragraph Summary Blank Fill -->
+            <div id="stage3View" class="hidden space-y-4">
+                <div class="glass-card p-6 sm:p-8 rounded-3xl border border-white/80 space-y-6">
+                    <div class="border-b border-slate-200/60 pb-3">
+                        <span class="text-xs font-bold text-purple-600 uppercase tracking-wider">Stage 3 • 수능형 지문 요약 빈칸 완성</span>
+                        <h3 class="text-lg font-bold text-slate-800 mt-1">지문의 핵심 내용을 요약한 문장의 빈칸 (A), (B)에 들어갈 적절한 어휘를 고르세요.</h3>
+                    </div>
+                    <div class="bg-white/80 p-6 rounded-2xl border border-purple-100 shadow-sm space-y-3">
+                        <p id="s3SummaryText" class="text-base sm:text-lg leading-relaxed text-slate-800 font-medium"></p>
+                    </div>
+                    <div id="s3Options" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+                </div>
+            </div>
+
+            <!-- Stage 4 View: Chunking Drag & Drop -->
+            <div id="stage4View" class="hidden space-y-4">
+                <div class="glass-card p-6 sm:p-8 rounded-3xl border border-white/80 space-y-6">
+                    <div class="flex justify-between items-center border-b border-slate-200/60 pb-3">
+                        <div>
+                            <span class="text-xs font-bold text-rose-500 uppercase tracking-wider">Stage 4 • 고난도 문장 Chunking 구획 배열</span>
+                            <h3 class="text-lg font-bold text-slate-800 mt-1">짧은 청크(Chunk) 단위를 순서대로 클릭/배치하여 완성하세요.</h3>
+                        </div>
+                    </div>
+                    <div class="bg-amber-50/80 p-4 rounded-2xl border border-amber-200/70">
+                        <span class="text-xs font-bold text-amber-700 block mb-1"><i class="fa-solid fa-language mr-1"></i>우리말 해석 참조:</span>
+                        <p id="s4KoreanTranslation" class="text-sm font-medium text-amber-900 leading-relaxed"></p>
+                    </div>
+                    <div class="space-y-2">
+                        <span class="text-xs font-bold text-slate-500">배치 영역 (클릭하여 완성):</span>
+                        <div id="s4DropZone" class="min-h-[80px] p-4 bg-white/90 rounded-2xl border-2 border-dashed border-purple-300 flex flex-wrap gap-2 items-center">
+                            <span class="text-xs text-slate-400 italic" id="s4Placeholder">아래 청크들을 순서대로 클릭하세요...</span>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <span class="text-xs font-bold text-slate-500">제공된 청크 조각:</span>
+                        <div id="s4SourceZone" class="flex flex-wrap gap-2 p-4 bg-slate-50/80 rounded-2xl border border-slate-200"></div>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button onclick="resetStage4()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-bold rounded-xl transition">
+                            <i class="fa-solid fa-rotate-right mr-1"></i>초기화
+                        </button>
+                        <button onclick="checkStage4()" class="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-xl shadow-md transition">
+                            정답 확인
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Teacher Dashboard -->
+        <div id="dashboardScreen" class="hidden space-y-6">
+            <div class="glass-card p-6 sm:p-8 rounded-3xl border border-white/80 space-y-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 border-b border-slate-200 pb-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-slate-800">교사 모니터링 대시보드</h2>
+                        <p class="text-xs text-slate-500">Firebase에 저장된 학생들의 실시간 활동 기록을 가져옵니다.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="goHome()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition">
+                            돌아가기
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 학번 검색 영역 -->
+                <div class="flex items-center gap-2 bg-white/90 p-4 rounded-2xl border border-slate-200">
+                    <input type="text" id="teacherSearchStudentId" placeholder="학번 검색 (예: 20101)" class="px-4 py-2 text-sm border rounded-xl flex-1 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    <button onclick="fetchTeacherData()" class="px-5 py-2 bg-purple-600 text-white text-sm font-bold rounded-xl hover:bg-purple-700">
+                        학번 조회
+                    </button>
+                    <button onclick="fetchAllTeacherData()" class="px-5 py-2 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700">
+                        전체 학생 조회
+                    </button>
+                </div>
+
+                <!-- Student Score Table -->
+                <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white/70">
+                    <table class="w-full text-left text-xs sm:text-sm">
+                        <thead class="bg-slate-100/80 text-slate-600 font-bold uppercase border-b border-slate-200">
+                            <tr>
+                                <th class="p-3">학번</th>
+                                <th class="p-3">이름</th>
+                                <th class="p-3">지문</th>
+                                <th class="p-3 text-center">Stage 1 (어휘)</th>
+                                <th class="p-3 text-center">Stage 2 (독해)</th>
+                                <th class="p-3 text-center">Stage 3 (요약)</th>
+                                <th class="p-3 text-center">Stage 4 (청킹)</th>
+                                <th class="p-3 text-center">총점</th>
+                                <th class="p-3 text-center">제출 시각</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboardTableBody" class="divide-y divide-slate-200">
+                            <tr><td colspan="9" class="p-4 text-center text-slate-400">조회 버튼을 눌러주세요.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast Notification Overlay -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none px-5 py-3 rounded-2xl shadow-xl font-bold text-sm flex items-center gap-3">
+        <i id="toastIcon" class="fa-solid"></i>
+        <span id="toastMsg">알림 메시지</span>
+    </div>
+
+    <!-- APP LOGIC & FIREBASE SYNC -->
+    <script>
+        const passageData = [
+            {
+                id: 31,
+                fullText: `One major threat to survival throughout human history has been infectious disease. To minimize the risk of infection, humans evolved emotional and behavioral responses aimed at avoiding potential sources of pathogens. One such response is disgust, a powerful emotion that motivates people to stay away from contaminated objects, spoiled food, or bodily fluids. Disgust serves as part of a broader behavioral immune system, which acts to prevent disease before it enters the body. Unlike the biological immune system that fights infections internally, the behavioral immune system operates through perception and action. By feeling disgusted by things associated with disease, individuals reduce their exposure to harmful agents. This emotional system, however, is not perfect; it sometimes overgeneralizes and triggers avoidance in situations where there is little real danger. Such false alarms may seem inefficient, but they reflect an evolutionary strategy that favors caution over omission when survival is at stake.`,
+                vocab: [
+                    { word: "infectious", meaning: "전염성의, 감염되는", options: ["전염성의, 감염되는", "독성의", "치명적인", "유전적인"] },
+                    { word: "pathogen", meaning: "병원체, 병원균", options: ["병원체, 병원균", "항체", "백신", "세포"] },
+                    { word: "disgust", meaning: "혐오감, 메스꺼움", options: ["혐오감, 메스꺼움", "호기심", "동정심", "자부심"] },
+                    { word: "contaminate", meaning: "오염시키다", options: ["오염시키다", "정화하다", "보존하다", "파괴하다"] },
+                    { word: "immune", meaning: "면역의, 면제된", options: ["면역의, 면제된", "취약한", "위험한", "급성의"] },
+                    { word: "perception", meaning: "지각, 인지", options: ["지각, 인지", "상상, 환상", "망각", "추론"] },
+                    { word: "overgeneralize", meaning: "지나치게 일반화하다", options: ["지나치게 일반화하다", "과소평가하다", "단순화하다", "우회하다"] },
+                    { word: "caution", meaning: "조심, 경계", options: ["조심, 경계", "무모함", "효율성", "과감함"] }
+                ],
+                quiz: [
+                    { q: "인간이 진화 과정에서 '혐오(disgust)'라는 감정을 발전시킨 주요 목적은 무엇인가?", options: ["타인과의 경쟁에서 우위를 점하기 위해", "병원균 및 감염원과의 접촉을 피하기 위해", "영양가가 높은 음식을 선별하기 위해", "생물학적 면역 반응을 촉진하기 위해"], ans: 1 },
+                    { q: "행동적 면역 체계(behavioral immune system)의 특징으로 알맞은 것은?", options: ["체내에서 병원균과 직접 싸운다.", "지각과 행동을 통해 사전에 질병을 예방한다.", "실제 위험이 없으면 절대로 작동하지 않는다.", "유전되지 않는 후천적 능력이다."], ans: 1 },
+                    { q: "글의 마지막 부분에서 'false alarms(오류 경보)'가 생기는 진화적 이유는 무엇인가?", options: ["효율성을 극대화하기 위해서", "생존을 위해 미연의 방지(주의)를 더 중시해서", "생물학적 면역계가 마비되었을 때를 대비해서", "사회적 유대감을 강화하기 위해서"], ans: 1 }
+                ],
+                summaryTask: {
+                    text: "Human evolution developed a behavioral immune system through emotions like disgust to avoid pathogens, adopting a strategy that prioritizes (A)___________ over (B)___________ when survival is threatened.",
+                    options: [
+                        { text: "(A) caution  -  (B) omission", isCorrect: true },
+                        { text: "(A) efficiency  -  (B) caution", isCorrect: false },
+                        { text: "(A) rejection  -  (B) optimism", isCorrect: false },
+                        { text: "(A) caution  -  (B) efficiency", isCorrect: false }
+                    ]
+                },
+                chunkTask: {
+                    kor: "이러한 오류 경보는 비효율적으로 보일 수 있지만, 생존이 걸려 있을 때 생략보다 주의를 선호하는 진화적 전략을 반영한다.",
+                    chunks: ["Such false alarms", "may seem inefficient,", "but they reflect", "an evolutionary strategy", "that favors caution", "over omission", "when survival is at stake."],
+                    correctOrder: [0, 1, 2, 3, 4, 5, 6]
+                }
+            },
+            {
+                id: 32,
+                fullText: `When it comes to bad bosses, second only to the abusive cruel boss is the manager who tries to please everyone. These leaders falsely believe that if they can just get all of their people to like them, then things will be okay. They lack the courage to make hard decisions and face their people with bad news because they fear disappointing anyone. Leaders who actively work to get their people to like them usually end up building shallow relationships with their people with special favors and false promises. Because they use gimmicks to manipulate people, they create no real loyalty and end up self-destructing when their little house of cards begins to fall.`,
+                vocab: [
+                    { word: "abusive", meaning: "학대하는, 남용하는", options: ["학대하는, 남용하는", "친절한", "유능한", "솔직한"] },
+                    { word: "falsely", meaning: "잘못하여, 거짓으로", options: ["잘못하여, 거짓으로", "정확히", "확실히", "공정하게"] },
+                    { word: "courage", meaning: "용기, 배짱", options: ["용기, 배짱", "두려움", "지혜", "분노"] },
+                    { word: "shallow", meaning: "피상적인, 얕은", options: ["피상적인, 얕은", "깊이있는", "진실된", "강렬한"] },
+                    { word: "favor", meaning: "호의, 특별한 혜택", options: ["호의, 특별한 혜택", "거절", "비난", "경고"] },
+                    { word: "gimmick", meaning: "술책, 꼼수", options: ["술책, 꼼수", "원칙", "진심", "전략"] },
+                    { word: "manipulate", meaning: "조종하다, 조작하다", options: ["조종하다, 조작하다", "존중하다", "방치하다", "협력하다"] },
+                    { word: "self-destruct", meaning: "자멸하다", options: ["자멸하다", "성공하다", "성장하다", "단합하다"] }
+                ],
+                quiz: [
+                    { q: "필자가 언급한 '모두를 기쁘게 하려는 리더'의 치명적 약점은 무엇인가?", options: ["부하 직원들에게 일을 너무 많이 시킨다.", "실망을 주기 싫어 어려운 결정이나 나쁜 소식을 피한다.", "직원들의 말을 전혀 듣지 않는다.", "지나치게 솔직하여 상처를 준다."], ans: 1 },
+                    { q: "이러한 리더들이 부하 직원들과 맺는 관계의 특성은?", options: ["깊은 신뢰와 충성심에 기반한다.", "특별한 혜택과 거짓 약속에 기반한 피상적 관계이다.", "엄격한 규율로 묶인 공적인 관계이다.", "지속적이고 견고한 협력 관계이다."], ans: 1 },
+                    { q: "본문에서 'house of cards(사상루각)'가 의미하는 바는?", options: ["꼼수와 조종으로 만든 위태롭고 허술한 조직 신뢰 구조", "경영진의 견고한 사옥", "치밀하게 계획된 사업 전략", "직원들이 공유하는 공통 목표"], ans: 0 }
+                ],
+                summaryTask: {
+                    text: "Leaders who constantly try to please everyone fail because they rely on (A)___________ rather than genuine courage, leading to (B)___________ relationships and lack of real loyalty.",
+                    options: [
+                        { text: "(A) gimmicks  -  (B) shallow", isCorrect: true },
+                        { text: "(A) courage  -  (B) deep", isCorrect: false },
+                        { text: "(A) favors  -  (B) sustainable", isCorrect: false },
+                        { text: "(A) rules  -  (B) temporary", isCorrect: false }
+                    ]
+                },
+                chunkTask: {
+                    kor: "모든 사람이 자신을 좋아하도록 적극적으로 노력하는 리더들은 보통 특별한 혜택과 거짓 약속으로 피상적인 관계를 맺게 된다.",
+                    chunks: ["Leaders who actively work", "to get their people to like them", "usually end up building", "shallow relationships", "with their people", "with special favors", "and false promises."],
+                    correctOrder: [0, 1, 2, 3, 4, 5, 6]
+                }
+            }
+        ];
+
+        // Global State Variables
+        let currentUser = { id: '', name: '' };
+        let activePassage = null;
+        let currentStage = 1;
+        let userScores = { stage1: 0, stage2: 0, stage3: 0, stage4: 0 };
+        
+        // Stage 1 variables
+        let s1Index = 0;
+        
+        // Stage 2 variables
+        let s2Index = 0;
+
+        // Stage 4 variables
+        let selectedChunks = [];
+
+        window.onload = function() {
+            renderPassageGrid();
+            checkSavedUser();
+        };
+
+        function showToast(msg, isSuccess = true) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.innerText = msg;
+            toast.className = `fixed bottom-6 right-6 z-50 transform translate-y-0 opacity-100 transition-all duration-300 px-5 py-3 rounded-2xl shadow-xl font-bold text-sm flex items-center gap-3 text-white ${isSuccess ? 'bg-emerald-600' : 'bg-rose-600'}`;
+            toastIcon.className = isSuccess ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark';
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function checkSavedUser() {
+            const savedId = localStorage.getItem('rb_student_id');
+            const savedName = localStorage.getItem('rb_student_name');
+            if (savedId && savedName) {
+                currentUser = { id: savedId, name: savedName };
+                document.getElementById('userModal').classList.add('hidden');
+                document.getElementById('userInfoBar').classList.remove('hidden');
+                document.getElementById('displayStudentId').innerText = savedId;
+                document.getElementById('displayStudentName').innerText = savedName;
+            }
+        }
+
+        function saveUserInfo() {
+            const id = document.getElementById('studentId').value.trim();
+            const name = document.getElementById('studentName').value.trim();
+            if (!id || !name) {
+                showToast('학번과 이름을 모두 입력해주세요.', false);
+                return;
+            }
+            currentUser = { id, name };
+            localStorage.setItem('rb_student_id', id);
+            localStorage.setItem('rb_student_name', name);
+            checkSavedUser();
+            showToast('학습자 정보가 저장되었습니다.');
+        }
+
+        function editUserInfo() {
+            document.getElementById('userModal').classList.remove('hidden');
+            document.getElementById('userInfoBar').classList.add('hidden');
+        }
+
+        function renderPassageGrid() {
+            const grid = document.getElementById('passageGrid');
+            grid.innerHTML = passageData.map(p => `
+                <div onclick="startPassage(${p.id})" class="glass-card p-6 rounded-3xl hover:scale-[1.02] transition cursor-pointer border border-white/80 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">지문 ${p.id}번</span>
+                        <i class="fa-solid fa-chevron-right text-slate-400"></i>
+                    </div>
+                    <h3 class="font-extrabold text-slate-800 text-lg">모의고사 ${p.id}번 챌린지</h3>
+                    <p class="text-xs text-slate-500 line-clamp-2">${p.fullText}</p>
+                </div>
+            `).join('');
+        }
+
+        function goHome() {
+            document.getElementById('selectionScreen').classList.remove('hidden');
+            document.getElementById('activityScreen').classList.add('hidden');
+            document.getElementById('dashboardScreen').classList.add('hidden');
+        }
+
+        function startPassage(id) {
+            if (!currentUser.id) {
+                showToast('학습자 등록을 먼저 진행해주세요.', false);
+                return;
+            }
+            activePassage = passageData.find(p => p.id === id);
+            userScores = { stage1: 0, stage2: 0, stage3: 0, stage4: 0 };
+            document.getElementById('activePassageTitle').innerText = `지문 ${id}번`;
+            document.getElementById('selectionScreen').classList.add('hidden');
+            document.getElementById('activityScreen').classList.remove('hidden');
+            loadStage(1);
+        }
+
+        function loadStage(stageNum) {
+            currentStage = stageNum;
+            document.getElementById('stage1View').classList.add('hidden');
+            document.getElementById('stage2View').classList.add('hidden');
+            document.getElementById('stage3View').classList.add('hidden');
+            document.getElementById('stage4View').classList.add('hidden');
+
+            document.getElementById(`stageIndicator1`).className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-white/60 text-slate-400";
+            document.getElementById(`stageIndicator2`).className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-white/60 text-slate-400";
+            document.getElementById(`stageIndicator3`).className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-white/60 text-slate-400";
+            document.getElementById(`stageIndicator4`).className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-white/60 text-slate-400";
+
+            document.getElementById(`stageIndicator${stageNum}`).className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-600 text-white shadow-sm";
+            document.getElementById('stageBadge').innerText = `Stage ${stageNum}`;
+
+            if (stageNum === 1) initStage1();
+            else if (stageNum === 2) initStage2();
+            else if (stageNum === 3) initStage3();
+            else if (stageNum === 4) initStage4();
+        }
+
+        // --- STAGE 1: VOCABULARY ---
+        function initStage1() {
+            document.getElementById('stage1View').classList.remove('hidden');
+            s1Index = 0;
+            renderS1Question();
+        }
+
+        function renderS1Question() {
+            const v = activePassage.vocab[s1Index];
+            document.getElementById('s1Progress').innerText = `${s1Index + 1} / ${activePassage.vocab.length}`;
+            document.
